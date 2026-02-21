@@ -1,0 +1,72 @@
+; CavernAudioDriver.inf
+; Installation file for Cavern Dolby Atmos Virtual Audio Driver
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Media
+ClassGuid={4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider=%ProviderName%
+CatalogFile=CavernAudioDriver.cat
+DriverVer=02/21/2026,1.0.0.0
+PnpLockdown=1
+
+[Manufacturer]
+%ManufacturerName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%CavernAudioDeviceDesc%=CavernAudioDevice,Root\CavernAudio
+
+[CavernAudioDevice.NTamd64]
+Include=ks.inf,wdmaudio.inf
+Needs=KS.Registration, WDMAUDIO.Registration
+CopyFiles=CavernAudioDriver.CopyList
+AddReg=CavernAudioDriver.AddReg
+
+[CavernAudioDevice.NTamd64.Interfaces]
+AddInterface=%KSCATEGORY_AUDIO%,%KSNAME_Wave%,CavernAudio.I.Wave
+AddInterface=%KSCATEGORY_RENDER%,%KSNAME_Wave%,CavernAudio.I.Wave
+AddInterface=%KSCATEGORY_CAPTURE%,%KSNAME_Wave%,CavernAudio.I.Wave
+
+[CavernAudioDevice.NTamd64.Services]
+AddService=CavernAudio,0x00000002,CavernAudioServiceInst
+
+[CavernAudioServiceInst]
+DisplayName=%CavernAudioServiceDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%12%\CavernAudioDriver.sys
+
+[CavernAudioDriver.CopyList]
+CavernAudioDriver.sys
+
+[CavernAudioDriver.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,CavernAudioDriver.sys
+HKR,Drivers,SubClasses,,"wave,midi,mixer,aux"
+
+; Wave Device
+HKR,Drivers\wave\CavernAudioDriver,Driver,,CavernAudioDriver.sys
+HKR,Drivers\wave\CavernAudioDriver,Description,,%CavernAudioDeviceDesc%
+
+; Dolby Atmos Passthrough Support
+HKR,Properties\{d0993b2b-7f75-4555-8c13-794b2a9b0e13},"EnablePassthrough",0x00010001,1
+HKR,Properties\{d0993b2b-7f75-4555-8c13-794b2a9b0e13},"SupportedFormats",,"AC3,EAC3,TRUEHD,MAT"
+
+[CavernAudio.I.Wave]
+AddReg=CavernAudio.I.Wave.AddReg
+
+[CavernAudio.I.Wave.AddReg]
+HKR,,CLSID,,%KSProxy.CLSID%
+HKR,,FriendlyName,,%CavernAudioDeviceDesc%
+
+[Strings]
+ProviderName="Cavern Project"
+ManufacturerName="Cavern Audio"
+CavernAudioDeviceDesc="Cavern Atmos Virtual Audio Device"
+CavernAudioServiceDesc="Cavern Audio Driver Service"
+KSProxy.CLSID="{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO="{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER="{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_CAPTURE="{65E8773D-8F56-11D0-A3B9-00A0C9223196}"
+KSNAME_Wave="Wave"
