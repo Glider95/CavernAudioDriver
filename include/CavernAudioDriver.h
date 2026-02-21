@@ -37,6 +37,10 @@
 #define CAVERN_PROP_SET_FORMAT          2
 #define CAVERN_PROP_GET_FORMAT          3
 
+// Forward declarations
+struct _CAVERN_MINIPORT;
+struct _CAVERN_AUDIO_CONTEXT;
+
 // Structure for format information
 typedef struct _CAVERN_AUDIO_FORMAT {
     ULONG FormatTag;        // CAVERN_FORMAT_* 
@@ -111,6 +115,40 @@ NTSTATUS CavernSendToPipe(
     _In_ PCAVERN_DEVICE_EXTENSION Extension,
     _In_reads_bytes_(DataSize) PVOID Data,
     _In_ SIZE_T DataSize
+);
+
+// Audio processing thread
+NTSTATUS CavernStartAudioProcessing(
+    _In_ struct _CAVERN_MINIPORT* Miniport
+);
+
+VOID CavernStopAudioProcessing(
+    _In_ struct _CAVERN_MINIPORT* Miniport
+);
+
+NTSTATUS CavernProcessAudioData(
+    _In_ struct _CAVERN_MINIPORT* Miniport,
+    _In_reads_bytes_(DataSize) PVOID Data,
+    _In_ SIZE_T DataSize
+);
+
+CAVERN_AUDIO_FORMAT CavernDetectFormat(
+    _In_reads_bytes_(BufferSize) PVOID Buffer,
+    _In_ SIZE_T BufferSize
+);
+
+NTSTATUS CavernForwardToPipe(
+    _In_ struct _CAVERN_MINIPORT* Miniport,
+    _In_reads_bytes_(DataSize) PVOID Data,
+    _In_ SIZE_T DataSize
+);
+
+NTSTATUS CavernOpenPipeConnection(
+    _In_ struct _CAVERN_MINIPORT* Miniport
+);
+
+VOID CavernClosePipeConnection(
+    _In_ struct _CAVERN_MINIPORT* Miniport
 );
 
 // Debug helpers

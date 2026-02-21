@@ -37,12 +37,16 @@ typedef struct _CAVERN_MINIPORT {
     PVOID DmaBuffer;
     ULONG DmaBufferSize;
     ULONG DmaPosition;
+    ULONG WritePosition;  // Added for audio processing
     
     // Synchronization
     KSPIN_LOCK Lock;
     
     // Pipe connection
     HANDLE PipeHandle;
+    
+    // Audio processing context
+    PVOID AudioContext;
     
 } CAVERN_MINIPORT, *PCAVERN_MINIPORT;
 
