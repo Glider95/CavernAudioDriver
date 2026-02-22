@@ -1,0 +1,78 @@
+;
+; CavernAudioDriver.inf
+; Installation file for Cavern Dolby Atmos Virtual Audio Driver
+; Based on Microsoft SysVAD sample
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Media
+ClassGuid={4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider=%ProviderName%
+CatalogFile=CavernAudioDriver.cat
+DriverVer=02/22/2026,1.0.0.0
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir=12
+CavernAudioDriver.CopyList=12
+
+[SourceDisksNames]
+1=%DiskName%,,,""
+
+[SourceDisksFiles]
+CavernAudioDriver.sys=1
+
+[Manufacturer]
+%ManufacturerName%=Cavern,NTamd64
+
+[Cavern.NTamd64]
+%CavernAudioDeviceDesc%=CavernAudioDevice,Root\CavernAudio
+
+[CavernAudioDevice.NT]
+Include=ks.inf,wdmaudio.inf
+Needs=KS.Registration, WDMAUDIO.Registration
+CopyFiles=CavernAudioDriver.CopyList
+AddReg=CavernAudioDevice.AddReg
+
+[CavernAudioDevice.NT.Interfaces]
+AddInterface=%KSCATEGORY_AUDIO%,%KSNAME_Wave%,CavernAudio.I.Wave
+AddInterface=%KSCATEGORY_RENDER%,%KSNAME_Wave%,CavernAudio.I.Wave
+
+[CavernAudioDevice.NT.Services]
+AddService=CavernAudio,0x00000002,CavernAudioServiceInst
+
+[CavernAudioServiceInst]
+DisplayName=%CavernAudioServiceDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%12%\CavernAudioDriver.sys
+
+[CavernAudioDriver.CopyList]
+CavernAudioDriver.sys
+
+[CavernAudioDevice.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,CavernAudioDriver.sys
+HKR,Drivers,SubClasses,,"wave"
+HKR,Drivers\wave\CavernAudioDriver,Driver,,CavernAudioDriver.sys
+HKR,Drivers\wave\CavernAudioDriver,Description,,%CavernAudioDeviceDesc%
+
+[CavernAudio.I.Wave]
+AddReg=CavernAudio.I.Wave.AddReg
+
+[CavernAudio.I.Wave.AddReg]
+HKR,,CLSID,,%KSProxy.CLSID%
+HKR,,FriendlyName,,%CavernAudioDeviceDesc%
+
+[Strings]
+ProviderName="Cavern Project"
+ManufacturerName="Cavern Audio"
+CavernAudioDeviceDesc="Cavern Atmos Virtual Audio Device"
+CavernAudioServiceDesc="Cavern Audio Driver Service"
+DiskName="Cavern Audio Driver Installation Disk"
+KSProxy.CLSID="{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO="{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER="{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSNAME_Wave="Wave"
