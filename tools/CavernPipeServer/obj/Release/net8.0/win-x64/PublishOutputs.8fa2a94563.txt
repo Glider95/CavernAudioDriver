@@ -1,0 +1,2 @@
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\publish\CavernPipeServer.pdb
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\publish\CavernPipeServer.exe

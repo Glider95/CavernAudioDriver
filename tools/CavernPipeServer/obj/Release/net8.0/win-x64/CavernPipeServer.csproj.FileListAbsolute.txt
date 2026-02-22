@@ -1,0 +1,15 @@
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\CavernPipeServer.exe
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\CavernPipeServer.deps.json
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\CavernPipeServer.runtimeconfig.json
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\CavernPipeServer.dll
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\bin\Release\net8.0\win-x64\CavernPipeServer.pdb
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.AssemblyInfoInputs.cache
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.AssemblyInfo.cs
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.csproj.CoreCompileInputs.cache
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.sourcelink.json
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.dll
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\refint\CavernPipeServer.dll
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.pdb
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\CavernPipeServer.genruntimeconfig.cache
+C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\tools\CavernPipeServer\obj\Release\net8.0\win-x64\ref\CavernPipeServer.dll
