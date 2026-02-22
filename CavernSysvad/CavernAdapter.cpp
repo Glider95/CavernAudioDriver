@@ -2,7 +2,6 @@
  * CavernAdapter.cpp
  * 
  * Adapter for Cavern Audio Driver
- * Based on Microsoft SysVAD sample
  ***************************************************************************/
 
 #include <ntddk.h>
@@ -10,11 +9,13 @@
 #include <portcls.h>
 #include <ks.h>
 #include <ksmedia.h>
-
 #include "CavernMiniportWaveRT.h"
 
+// Forward declaration
+NTSTATUS AddDevice(_In_ PDRIVER_OBJECT DriverObject, _In_ PDEVICE_OBJECT PhysicalDeviceObject);
+
 // Driver entry point
-NTSTATUS DriverEntry(
+extern "C" NTSTATUS DriverEntry(
     _In_ PDRIVER_OBJECT DriverObject,
     _In_ PUNICODE_STRING RegistryPath
 )
@@ -23,11 +24,10 @@ NTSTATUS DriverEntry(
     
     KdPrint(("CavernAudioDriver: DriverEntry\n"));
     
-    // Initialize PortCls
     status = PcInitializeAdapterDriver(
         DriverObject,
         RegistryPath,
-        (PDRIVER_ADD_DEVICE)AddDevice
+        AddDevice
     );
     
     if (!NT_SUCCESS(status)) {
@@ -48,13 +48,11 @@ NTSTATUS AddDevice(
     NTSTATUS status;
     PDEVICE_OBJECT functionalDeviceObject = NULL;
     PUNKNOWN unknownMiniport = NULL;
-    IResourceList* resourceList = NULL;
     
     UNREFERENCED_PARAMETER(DriverObject);
     
     KdPrint(("CavernAudioDriver: AddDevice\n"));
     
-    // Create the functional device object
     status = IoCreateDevice(
         DriverObject,
         0,
@@ -70,7 +68,6 @@ NTSTATUS AddDevice(
         return status;
     }
     
-    // Attach to device stack
     PDEVICE_OBJECT lowerDeviceObject = IoAttachDeviceToDeviceStack(
         functionalDeviceObject,
         PhysicalDeviceObject
@@ -82,93 +79,67 @@ NTSTATUS AddDevice(
         return STATUS_UNSUCCESSFUL;
     }
     
-    // Create resource list
-    status = PcNewResourceList(
-        &resourceList,
-        NULL,
-        NonPagedPoolNx,
-        PhysicalDeviceObject,
-        NULL,
-        0
-    );
-    
-    if (!NT_SUCCESS(status)) {
-        KdPrint(("CavernAudioDriver: PcNewResourceList warning 0x%08X\n", status));
-    }
-    
-    // Create our miniport
     status = CreateCavernMiniportWaveRT(
         &unknownMiniport,
         GUID_NULL,
         NULL,
-        NonPagedPoolNx
+        POOL_FLAG_NON_PAGED
     );
     
     if (!NT_SUCCESS(status)) {
         KdPrint(("CavernAudioDriver: CreateCavernMiniportWaveRT failed 0x%08X\n", status));
         IoDetachDevice(lowerDeviceObject);
         IoDeleteDevice(functionalDeviceObject);
-        if (resourceList) {
-            resourceList->lpVtbl->Release(resourceList);
-        }
         return status;
     }
     
-    // Create PortCls port for WaveRT
-    IPortWaveRT* portWaveRT = NULL;
+    PPORTWAVERT portWaveRT = NULL;
     status = PcNewPort(
-        &portWaveRT,
-        &CLSID_PortWaveRT
+        (PPORT*)&portWaveRT,
+        IID_IPortWaveRT
     );
     
     if (!NT_SUCCESS(status)) {
         KdPrint(("CavernAudioDriver: PcNewPort failed 0x%08X\n", status));
-        unknownMiniport->lpVtbl->Release(unknownMiniport);
+        unknownMiniport->Release();
         IoDetachDevice(lowerDeviceObject);
         IoDeleteDevice(functionalDeviceObject);
-        if (resourceList) {
-            resourceList->lpVtbl->Release(resourceList);
-        }
         return status;
     }
     
-    // Initialize the port with our miniport
-    status = portWaveRT->lpVtbl->Init(
-        portWaveRT,
-        unknownMiniport,
-        functionalDeviceObject,
-        lowerDeviceObject,
-        NonPagedPoolNx,
-        resourceList,
-        NULL,   // Device name
-        NULL,   // DRM rights
-        0,      // DRM right count
-        NULL    // ISR
-    );
+    // Get the IMiniportWaveRT interface
+    IMiniportWaveRT *miniportWaveRT = NULL;
+    status = unknownMiniport->QueryInterface(IID_IMiniportWaveRT, (PVOID*)&miniportWaveRT);
     
     if (!NT_SUCCESS(status)) {
-        KdPrint(("CavernAudioDriver: PortWaveRT Init failed 0x%08X\n", status));
-        portWaveRT->lpVtbl->Release(portWaveRT);
-        unknownMiniport->lpVtbl->Release(unknownMiniport);
+        KdPrint(("CavernAudioDriver: QueryInterface failed 0x%08X\n", status));
+        portWaveRT->Release();
+        unknownMiniport->Release();
         IoDetachDevice(lowerDeviceObject);
         IoDeleteDevice(functionalDeviceObject);
-        if (resourceList) {
-            resourceList->lpVtbl->Release(resourceList);
-        }
         return status;
     }
     
-    // Device is ready
+    // Initialize the miniport
+    status = miniportWaveRT->Init(portWaveRT);
+    
+    if (!NT_SUCCESS(status)) {
+        KdPrint(("CavernAudioDriver: Miniport Init failed 0x%08X\n", status));
+        miniportWaveRT->Release();
+        portWaveRT->Release();
+        unknownMiniport->Release();
+        IoDetachDevice(lowerDeviceObject);
+        IoDeleteDevice(functionalDeviceObject);
+        return status;
+    }
+    
     functionalDeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
     
     KdPrint(("CavernAudioDriver: AddDevice completed successfully\n"));
     
-    // Clean up
-    portWaveRT->lpVtbl->Release(portWaveRT);
-    unknownMiniport->lpVtbl->Release(unknownMiniport);
-    if (resourceList) {
-        resourceList->lpVtbl->Release(resourceList);
-    }
+    miniportWaveRT->Release();
+    portWaveRT->Release();
+    unknownMiniport->Release();
     
     return STATUS_SUCCESS;
 }
