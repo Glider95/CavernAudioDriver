@@ -1,0 +1,116 @@
+/***************************************************************************
+ * CavernAudioDriver.h
+ * 
+ * Header file for Cavern Dolby Atmos Virtual Audio Driver
+ ***************************************************************************/
+
+#pragma once
+
+// Must define these before including WDK headers
+#define _NTDDK_
+#define KERNEL_MODE
+
+#include <ntddk.h>
+#include <wdf.h>
+
+// Ks.h requires calling convention to be set
+#ifndef CDECL
+#define CDECL __cdecl
+#endif
+
+// Define GUIDs before including ks.h
+#ifndef DEFINE_GUID
+#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+    EXTERN_C const GUID DECLSPEC_SELECTANY name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+#endif
+
+#include <ks.h>
+#include <ksmedia.h>
+
+// Driver version
+#define CAVERN_AUDIO_VERSION_MAJOR 1
+#define CAVERN_AUDIO_VERSION_MINOR 0
+#define CAVERN_AUDIO_VERSION_BUILD 0
+
+// Maximum supported channels
+#define CAVERN_MAX_CHANNELS 16
+
+// Buffer sizes
+#define CAVERN_BUFFER_SIZE (48 * 1024)      // 48KB buffers
+#define CAVERN_MAX_PACKET_SIZE (4096)       // 4KB max packet
+
+// Supported formats
+#define CAVERN_FORMAT_PCM       0x0001
+#define CAVERN_FORMAT_AC3       0x2000
+#define CAVERN_FORMAT_EAC3      0x2001  // Dolby Digital Plus
+#define CAVERN_FORMAT_TRUEHD    0x2002  // Dolby TrueHD
+#define CAVERN_FORMAT_MAT       0x2003  // Dolby MAT (Atmos)
+#define CAVERN_FORMAT_DTS       0x2004
+#define CAVERN_FORMAT_DTSHD     0x2005
+
+// Custom properties
+#define CAVERN_PROP_ENABLE_PASSTHROUGH  1
+#define CAVERN_PROP_SET_FORMAT          2
+#define CAVERN_PROP_GET_FORMAT          3
+
+// Driver context structure
+typedef struct _DRIVER_CONTEXT {
+    WDFDEVICE Device;
+    HANDLE PipeHandle;
+    BOOLEAN PassthroughEnabled;
+    UNICODE_STRING PipeName;
+} DRIVER_CONTEXT, *PDRIVER_CONTEXT;
+
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DRIVER_CONTEXT, GetDriverContext)
+
+// Function prototypes
+DRIVER_INITIALIZE DriverEntry;
+EVT_WDF_DRIVER_DEVICE_ADD CavernAudioEvtDeviceAdd;
+EVT_WDF_IO_QUEUE_IO_READ CavernAudioEvtIoRead;
+EVT_WDF_IO_QUEUE_IO_WRITE CavernAudioEvtIoWrite;
+EVT_WDF_DEVICE_PREPARE_HARDWARE CavernAudioEvtPrepareHardware;
+EVT_WDF_DEVICE_RELEASE_HARDWARE CavernAudioEvtReleaseHardware;
+
+// Forward declarations
+struct _CAVERN_MINIPORT;
+struct _CAVERN_AUDIO_CONTEXT;
+
+// Structure for format information
+typedef struct _CAVERN_AUDIO_FORMAT {
+    ULONG FormatTag;        // CAVERN_FORMAT_* 
+    ULONG Channels;
+    ULONG SampleRate;
+    ULONG BitsPerSample;
+    ULONG BitRate;          // For compressed formats
+    BOOLEAN IsAtmos;        // TRUE if Atmos content
+} CAVERN_AUDIO_FORMAT, *PCAVERN_AUDIO_FORMAT;
+
+// Device context extension
+typedef struct _CAVERN_DEVICE_EXTENSION {
+    // Audio format info
+    CAVERN_AUDIO_FORMAT CurrentFormat;
+    
+    // State
+    BOOLEAN StreamingActive;
+    BOOLEAN PassthroughEnabled;
+    
+    // Statistics
+    ULONGLONG BytesProcessed;
+    ULONGLONG PacketsProcessed;
+    
+    // Synchronization
+    KSPIN_LOCK Lock;
+    
+    // Pipe handle to CavernPipeServer
+    HANDLE PipeHandle;
+    UNICODE_STRING PipeName;
+    
+} CAVERN_DEVICE_EXTENSION, *PCAVERN_DEVICE_EXTENSION;
+
+// Debug helpers
+#if DBG
+    #define CavernTrace(Format, ...) \
+        DbgPrint("CavernAudio: " Format "\n", ##__VA_ARGS__)
+#else
+    #define CavernTrace(Format, ...) ((void)0)
+#endif
