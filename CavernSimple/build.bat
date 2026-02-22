@@ -5,14 +5,14 @@ cd /d C:\Users\nicol\.openclaw\workspace\workspace\CavernAudioDriver\CavernSimpl
 call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
 set VisualStudioVersion=17.0
 
-REM Build the driver
-echo Building CavernSimple...
-MSBuild CavernSimple.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:SignMode=Off
+REM Build only compile and link (skip InfVerif and packaging)
+echo Building CavernSimple (driver only)...
+MSBuild CavernSimple.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:SignMode=Off /t:ClCompile;Link
 
 if %ERRORLEVEL% NEQ 0 (
     echo Build failed!
     exit /b %ERRORLEVEL%
 )
 
-echo Build successful!
-echo Output: Debug\CavernSimple.sys
+echo Driver built successfully!
+echo Output: x64\Debug\CavernSimple.sys

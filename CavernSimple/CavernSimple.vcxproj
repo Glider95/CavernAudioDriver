@@ -16,12 +16,22 @@
   
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   
+  <PropertyGroup>
+    <SpectreMitigation>false</SpectreMitigation>
+    <EnableSpectreMitigation>false</EnableSpectreMitigation>
+    <Driver_SpectreMitigation>false</Driver_SpectreMitigation>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <DisableSpectreMitigation>true</DisableSpectreMitigation>
+  </PropertyGroup>
+  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>KMDF</DriverType>
+    <DriverType>WDM</DriverType>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
     <SignMode>Off</SignMode>
     <SpectreMitigation>false</SpectreMitigation>
@@ -31,14 +41,17 @@
   
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(DDK_INC_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(DDK_INC_PATH);C:\Program Files (x86)\Windows Kits\10\Include\wdf\kmdf\1.15;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32;UNICODE;_UNICODE;PC_IMPLEMENTATION;_USE_WAVERT_;_NEW_DELETE_OPERATORS_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(DDK_LIB_PATH)\portcls.lib;$(DDK_LIB_PATH)\stdunk.lib;$(DDK_LIB_PATH)\libcntpr.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(DDK_LIB_PATH)\portcls.lib;$(DDK_LIB_PATH)\stdunk.lib;$(DDK_LIB_PATH)\libcntpr.lib;C:\Program Files (x86)\Windows Kits\10\lib\wdf\kmdf\x64\1.15\wdfldr.lib;C:\Program Files (x86)\Windows Kits\10\lib\wdf\kmdf\x64\1.15\wdfdriverentry.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <InfVerif>
+      <Enabled>false</Enabled>
+    </InfVerif>
   </ItemDefinitionGroup>
   
   <ItemGroup>

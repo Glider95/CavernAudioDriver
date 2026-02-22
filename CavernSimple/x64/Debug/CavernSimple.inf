@@ -1,0 +1,147 @@
+;
+; CavernSimple.inf
+; Installation file for Cavern Audio Driver
+;
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = MEDIA
+Provider    = %ProviderName%
+ClassGUID   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+DriverVer = 02/22/2026,9.47.0.543
+CatalogFile = CavernSimple.cat
+PnpLockDown = 1
+
+[SourceDisksNames]
+222="Cavern Audio Driver Disk","",222
+
+[SourceDisksFiles]
+CavernSimple.sys=222
+
+[Manufacturer]
+%MfgName%=Cavern,NTamd64
+
+[Cavern.NTamd64]
+%Cavern.DeviceDesc%=Cavern_SA, ROOT\CavernAudio
+
+[Cavern.NTamd64.10.0...16299]
+%Cavern.DeviceDesc%=Cavern_SA.NT.10.0...16299, ROOT\CavernAudio
+
+[DestinationDirs]
+Cavern_SA.CopyList=13
+
+;======================================================
+; Cavern_SA
+;======================================================
+;======================================================
+; Base section (required for InfVerif)
+;======================================================
+[Cavern_SA]
+CopyFiles=Cavern_SA.CopyList
+AddReg=Cavern_SA.AddReg
+
+[Cavern_SA.CopyList]
+CavernSimple.sys
+
+;======================================================
+; NT-specific sections
+;======================================================
+[Cavern_SA.NT]
+CopyFiles=Cavern_SA.CopyList
+AddReg=Cavern_SA.AddReg
+
+[Cavern_SA.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,CavernSimple.sys
+HKR,Drivers,SubClasses,,"wave,mixer"
+HKR,Drivers\wave\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\wave\wdmaud.drv,Description,,%Cavern.DeviceDesc%
+
+;======================================================
+; render interfaces
+;======================================================
+[Cavern.I.WaveSpeaker]
+AddReg=Cavern.I.WaveSpeaker.AddReg
+
+[Cavern.I.WaveSpeaker.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%Cavern.WaveSpeaker.szPname%
+
+[Cavern.I.TopologySpeaker]
+AddReg=Cavern.I.TopologySpeaker.AddReg
+
+[Cavern.I.TopologySpeaker.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%Cavern.TopologySpeaker.szPname%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+;======================================================
+; Cavern_SA Device Install
+;======================================================
+[Cavern_SA.NT.10.0...16299]
+Include=ks.inf,wdmaudio.inf
+Needs=KS.Registration, WDMAUDIO.Registration
+CopyFiles=Cavern_SA.CopyList
+AddReg=Cavern_SA.AddReg
+
+[Cavern_SA.NT.10.0...16299.Interfaces]
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveSpeaker%, Cavern.I.WaveSpeaker
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveSpeaker%, Cavern.I.WaveSpeaker
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveSpeaker%, Cavern.I.WaveSpeaker
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopologySpeaker%, Cavern.I.TopologySpeaker
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopologySpeaker%, Cavern.I.TopologySpeaker
+
+[Cavern_SA.NT.10.0...16299.Services]
+AddService=CavernSimple,0x00000002,Cavern_Service_Inst
+
+[Cavern_Service_Inst]
+DisplayName=%Cavern.SvcDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\CavernSimple.sys
+
+[Cavern_SA.NT.10.0...16299.HW]
+AddReg=AUDIOHW.AddReg
+
+[AUDIOHW.AddReg]
+HKR,,DeviceType,0x10001,0x0000001D
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GRGWGX;;;WD)(A;;GRGWGX;;;RC)"
+
+;======================================================
+; WDF
+;======================================================
+[Cavern_SA.NT.10.0...16299.Wdf]
+KmdfService = CavernSimple, Cavern_SA_WdfSect
+[Cavern_SA_WdfSect]
+KmdfLibraryVersion = 1.15
+
+;======================================================
+; COMMON
+;======================================================
+[Strings]
+
+KSNAME_WaveSpeaker="WaveSpeaker"
+KSNAME_TopologySpeaker="TopologySpeaker"
+
+Proxy.CLSID="{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO="{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER="{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_REALTIME ="{EB115FFC-10C8-4964-831D-6DCB02E6F23F}"
+KSCATEGORY_TOPOLOGY = "{DDA54A40-1E4C-11D1-A050-405705C10000}"
+
+KSNODETYPE_ANY   = "{00000000-0000-0000-0000-000000000000}"
+
+PKEY_AudioEndpoint_Association               = "{1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E},2"
+PKEY_AudioEndpoint_Supports_EventDriven_Mode = "{1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E},7"
+
+ProviderName = "Cavern Project"
+MfgName      = "Cavern Audio"
+
+Cavern.DeviceDesc="Cavern Atmos Virtual Audio Device"
+Cavern.SvcDesc="Cavern Audio Driver Service"
+
+Cavern.WaveSpeaker.szPname="Cavern Atmos Wave Speaker"
+Cavern.TopologySpeaker.szPname="Cavern Atmos Topology Speaker"
+
