@@ -1,22 +1,27 @@
 /***************************************************************************
  * CavernAudioDriver.c
  * 
- * Minimal WDF Driver for Cavern Audio
- * Simplified version for compilation testing
+ * Cavern Dolby Atmos Virtual Audio Driver
+ * Forwards raw bitstream to CavernPipeServer via named pipe
  ***************************************************************************/
 
 #include <ntddk.h>
 #include <wdf.h>
+#include "..\include\FormatDetection.h"
 
 #define DRIVER_TAG 'nvarC'  // "Cavn" in little-endian
 #define PIPE_NAME L"\\??\\pipe\\CavernAudioPipe"
+#define CAVERN_POOL_TAG 'navC'
 
 // Driver context structure
 typedef struct _DRIVER_CONTEXT {
     WDFDEVICE Device;
     HANDLE PipeHandle;
     BOOLEAN PassthroughEnabled;
+    BOOLEAN PipeConnected;
     UNICODE_STRING PipeName;
+    CAVERN_FORMAT_INFO CurrentFormat;
+    KSPIN_LOCK PipeLock;
 } DRIVER_CONTEXT, *PDRIVER_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DRIVER_CONTEXT, GetDriverContext)
@@ -30,6 +35,11 @@ EVT_WDF_DEVICE_RELEASE_HARDWARE CavernAudioEvtReleaseHardware;
 
 NTSTATUS CavernAudioCreatePipe(PDRIVER_CONTEXT Context);
 VOID CavernAudioClosePipe(PDRIVER_CONTEXT Context);
+NTSTATUS CavernAudioForwardToPipe(
+    PDRIVER_CONTEXT Context,
+    PVOID Buffer,
+    SIZE_T Length
+);
 
 /**************************************************************************
  * DriverEntry
@@ -42,7 +52,7 @@ NTSTATUS DriverEntry(
     NTSTATUS status;
     WDF_DRIVER_CONFIG config;
 
-    KdPrint(("CavernAudioDriver: DriverEntry\n"));
+    KdPrint(("CavernAudioDriver: DriverEntry - v1.0 Dolby Atmos Passthrough\n"));
 
     WDF_DRIVER_CONFIG_INIT(&config, CavernAudioEvtDeviceAdd);
 
@@ -110,7 +120,9 @@ NTSTATUS CavernAudioEvtDeviceAdd(
     RtlZeroMemory(context, sizeof(DRIVER_CONTEXT));
     context->Device = device;
     context->PassthroughEnabled = TRUE;
+    context->PipeConnected = FALSE;
     RtlInitUnicodeString(&context->PipeName, PIPE_NAME);
+    KeInitializeSpinLock(&context->PipeLock);
 
     // Create I/O queue
     WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchParallel);
@@ -152,9 +164,11 @@ NTSTATUS CavernAudioEvtPrepareHardware(
     context = GetDriverContext(Device);
     status = CavernAudioCreatePipe(context);
     
-    if (!NT_SUCCESS(status)) {
-        KdPrint(("CavernAudioDriver: CavernAudioCreatePipe failed 0x%08X\n", status));
-        // Don't fail - we can retry later
+    if (NT_SUCCESS(status)) {
+        KdPrint(("CavernAudioDriver: Pipe connected on PrepareHardware\n"));
+    } else {
+        KdPrint(("CavernAudioDriver: Pipe not available (will retry on write)\n"));
+        // Don't fail - we'll retry when data arrives
     }
 
     return STATUS_SUCCESS;
@@ -188,12 +202,16 @@ NTSTATUS CavernAudioCreatePipe(PDRIVER_CONTEXT Context)
     NTSTATUS status;
     OBJECT_ATTRIBUTES objAttr;
     IO_STATUS_BLOCK ioStatus;
+    KIRQL oldIrql;
+
+    KeAcquireSpinLock(&Context->PipeLock, &oldIrql);
 
     if (Context->PipeHandle != NULL) {
+        KeReleaseSpinLock(&Context->PipeLock, oldIrql);
         return STATUS_SUCCESS;
     }
 
-    KdPrint(("CavernAudioDriver: Creating pipe connection\n"));
+    KdPrint(("CavernAudioDriver: Creating pipe connection to %wZ\n", &Context->PipeName));
 
     InitializeObjectAttributes(
         &objAttr,
@@ -220,10 +238,13 @@ NTSTATUS CavernAudioCreatePipe(PDRIVER_CONTEXT Context)
     if (!NT_SUCCESS(status)) {
         KdPrint(("CavernAudioDriver: ZwCreateFile failed 0x%08X\n", status));
         Context->PipeHandle = NULL;
+        Context->PipeConnected = FALSE;
     } else {
         KdPrint(("CavernAudioDriver: Pipe connected successfully\n"));
+        Context->PipeConnected = TRUE;
     }
 
+    KeReleaseSpinLock(&Context->PipeLock, oldIrql);
     return status;
 }
 
@@ -232,15 +253,71 @@ NTSTATUS CavernAudioCreatePipe(PDRIVER_CONTEXT Context)
  ***************************************************************************/
 VOID CavernAudioClosePipe(PDRIVER_CONTEXT Context)
 {
+    KIRQL oldIrql;
+
+    KeAcquireSpinLock(&Context->PipeLock, &oldIrql);
+
     if (Context->PipeHandle != NULL) {
         KdPrint(("CavernAudioDriver: Closing pipe\n"));
         ZwClose(Context->PipeHandle);
         Context->PipeHandle = NULL;
+        Context->PipeConnected = FALSE;
     }
+
+    KeReleaseSpinLock(&Context->PipeLock, oldIrql);
 }
 
 /**************************************************************************
- * CavernAudioEvtIoWrite
+ * CavernAudioForwardToPipe
+ ***************************************************************************/
+NTSTATUS CavernAudioForwardToPipe(
+    PDRIVER_CONTEXT Context,
+    PVOID Buffer,
+    SIZE_T Length
+)
+{
+    NTSTATUS status;
+    IO_STATUS_BLOCK ioStatus;
+    KIRQL oldIrql;
+
+    // Ensure pipe is connected
+    if (!Context->PipeConnected || Context->PipeHandle == NULL) {
+        status = CavernAudioCreatePipe(Context);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+    }
+
+    KeAcquireSpinLock(&Context->PipeLock, &oldIrql);
+
+    if (Context->PipeHandle == NULL) {
+        KeReleaseSpinLock(&Context->PipeLock, oldIrql);
+        return STATUS_DEVICE_NOT_CONNECTED;
+    }
+
+    status = ZwWriteFile(
+        Context->PipeHandle,
+        NULL,
+        NULL,
+        NULL,
+        &ioStatus,
+        Buffer,
+        (ULONG)Length,
+        NULL,
+        NULL
+    );
+
+    KeReleaseSpinLock(&Context->PipeLock, oldIrql);
+
+    if (NT_SUCCESS(status)) {
+        status = ioStatus.Status;
+    }
+
+    return status;
+}
+
+/**************************************************************************
+ * CavernAudioEvtIoWrite - Handles audio data from applications
  ***************************************************************************/
 VOID CavernAudioEvtIoWrite(
     _In_ WDFQUEUE Queue,
@@ -252,11 +329,12 @@ VOID CavernAudioEvtIoWrite(
     PVOID buffer;
     NTSTATUS status;
     WDFDEVICE device;
-    IO_STATUS_BLOCK ioStatus;
+    CAVERN_FORMAT_TYPE formatType;
 
     device = WdfIoQueueGetDevice(Queue);
     context = GetDriverContext(device);
 
+    // Get the write buffer
     status = WdfRequestRetrieveInputBuffer(Request, 0, &buffer, NULL);
     if (!NT_SUCCESS(status)) {
         KdPrint(("CavernAudioDriver: WdfRequestRetrieveInputBuffer failed 0x%08X\n", status));
@@ -264,23 +342,41 @@ VOID CavernAudioEvtIoWrite(
         return;
     }
 
-    if (context->PassthroughEnabled && context->PipeHandle != NULL) {
-        status = ZwWriteFile(
-            context->PipeHandle,
-            NULL,
-            NULL,
-            NULL,
-            &ioStatus,
-            buffer,
-            (ULONG)Length,
-            NULL,
-            NULL
-        );
-
-        if (!NT_SUCCESS(status)) {
-            KdPrint(("CavernAudioDriver: ZwWriteFile failed 0x%08X\n", status));
+    // Detect format if we don't know it yet
+    if (context->CurrentFormat.Format == CavernFormatUnknown) {
+        formatType = CavernDetectFormatInline((PUCHAR)buffer, Length);
+        
+        if (formatType != CavernFormatUnknown) {
+            CavernGetFormatInfo(formatType, &context->CurrentFormat);
+            
+            switch (formatType) {
+                case CavernFormatEAC3:
+                    KdPrint(("CavernAudioDriver: Detected E-AC3 (Dolby Digital Plus)\n"));
+                    break;
+                case CavernFormatTrueHD:
+                    KdPrint(("CavernAudioDriver: Detected Dolby TrueHD\n"));
+                    break;
+                case CavernFormatAC3:
+                    KdPrint(("CavernAudioDriver: Detected AC3 (Dolby Digital)\n"));
+                    break;
+                default:
+                    KdPrint(("CavernAudioDriver: Detected format type %d\n", formatType));
+                    break;
+            }
         }
     }
 
+    // Forward to pipe if passthrough is enabled
+    if (context->PassthroughEnabled) {
+        status = CavernAudioForwardToPipe(context, buffer, Length);
+        
+        if (!NT_SUCCESS(status)) {
+            // Log error but still complete the request
+            // The audio subsystem should continue working even if pipe fails
+            KdPrint(("CavernAudioDriver: ForwardToPipe failed 0x%08X\n", status));
+        }
+    }
+
+    // Complete the request
     WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, Length);
 }
