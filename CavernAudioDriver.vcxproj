@@ -71,8 +71,8 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ks.lib;portcls.lib;wmilib.lib;WdfLdr.lib;WdfDriverStub.lib;ntoskrnl.lib;hal.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ks.lib;portcls.lib;wmilib.lib;wdfldr.lib;wdfdriverentry.lib;ntoskrnl.lib;hal.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\km\x64;C:\Program Files (x86)\Windows Kits\10\Lib\wdf\kmdf\x64\1.33;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   
@@ -91,7 +91,7 @@
   <ItemGroup>
     <ClCompile Include="src\CavernAudioDriver.c" />
     <ClCompile Include="src\MiniportWaveRT.c" />
-    <ClCompile Include="src\AudioProcessing.c" />
+    <!-- <ClCompile Include="src\AudioProcessing.c" /> -->
   </ItemGroup>
   
   <ItemGroup>

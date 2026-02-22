@@ -1,15 +1,15 @@
 /***************************************************************************
- * MiniportWaveRT.c
+ * AudioProcessing.c
  * 
- * WaveRT Miniport stub - Simplified version
+ * Audio Processing stub - Simplified version
  ***************************************************************************/
 
 #include <ntddk.h>
 #include <wdf.h>
 
 // Stub implementation - will be expanded later
-NTSTATUS MiniportWaveRT_Stub_Init()
+NTSTATUS AudioProcessing_Stub_Init()
 {
-    KdPrint(("CavernAudioDriver: MiniportWaveRT stub init\n"));
+    KdPrint(("CavernAudioDriver: AudioProcessing stub init\n"));
     return STATUS_SUCCESS;
 }
